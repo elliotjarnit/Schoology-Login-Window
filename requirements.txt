@@ -1,5 +1,1 @@
-pillow
-colorama
-img2pdf
 selenium
-requests
