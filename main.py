@@ -1,99 +1,72 @@
-from functions import *
-from login import *
+from sys import platform
+import os
+from selenium import webdriver
+import time
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.common.by import By
+import selenium.common
+# Start of editable settings
 
+# The subdomain to the schoology domain. Write False if not applicable. Example: usdc.schoology.com would be usdc
+subdomain = "klschools"
 
-init()
-clear()
+# End of editable settings
 
-print(Fore.LIGHTBLUE_EX + "Schoology PDF Uploader\n\n" + Style.RESET_ALL)
 if platform == "darwin":
-    print("You will need to login to your Schoology account")
-    input("Press " + Fore.RED + "enter" + Style.RESET_ALL + " to continue")
-    clear()
-elif platform == "win32":
-    print("You will need to login to your Schoology account")
-    input("Press " + Fore.RED + "enter" + Style.RESET_ALL + " to continue")
-    clear()
+    pass
 else:
-    print(Fore.RED + "Your platform is not supported")
+    print("Unsupported platform")
     time.sleep(5)
     exit()
 
-login = Login()
-
-print("Pick your image")
-while True:
-    Tk().withdraw()
-    filepath = askopenfilename()
-    if filepath == "":
-        printError("Please pick a valid image file", True)
+try:
+    driver = webdriver.Chrome()
+except selenium.common.exceptions.WebDriverException:
+    print("Need to install chrome web driver. Type \"Y\" to continue or \"N\" to cancel")
+    a = input("> ")
+    if a.lower() == "y":
+        print("Starting install of chrome web driver")
+        os.system("brew install chromedriver")
+        print("\n\n\n\nInstalled Driver. Continuing")
+        time.sleep(3)
+        driver = webdriver.Chrome()
+    elif a.lower() == "n":
+        print("Aborting...")
+        exit()
     else:
-        break
+        print("Not a valid answer. Aborting...")
+        exit()
+except ConnectionError:
+    print("Please update google chrome to latest version")
+    time.sleep(5)
+    exit()
 
-oauth = OAuth1(login.publicKey, client_secret=login.secretKey)
+if not subdomain:
+    domain = "https://schoology.com"
+else:
+    domain = "https://" + subdomain + ".schoology.com"
+
+driver.get(domain + "/api")
 
 try:
-    openedImage = Image.open(filepath)
+    WebDriverWait(driver, 120).until(EC.url_matches((domain + "/api") or (domain + "/api#")))
 except:
-    printError("Invalid image file. Please choose another.", True)
+    print("Took too long")
+    time.sleep(5)
+    exit()
 
-try:
-    pdf = img2pdf.convert(openedImage.filename)
-except:
-    openedImage = openedImage.convert("RGBA")
-    imgData = openedImage.getdata()
-
-url = str("https://api.schoology.com/v1/users/" + login.userID + "/sections")
-
-headers = {"Accept": "application/json"}
-getSections = makeRequest("get", url, oauth, headers)
-SectionRemaining = str(json.loads(getSections.text)["section"])
-clear()
-Sections = {}
-
-while True:
-    Section1 = str(SectionRemaining).split("\'id\': \'", 1)
-    ID = str(Section1[1].split("\'", 1)[0])
-    Name = Section1[1].split("course_title\': \'", 1)[1].split("\'", 1)[0]
-    SectionRemaining = Section1[1].split("course_title\': \'", 1)[1]
-    Sections.update({Name: ID})
-    if str(SectionRemaining.find("course_title\'")) == "-1":
-        break
-
-print("Courses:\n")
-
-x = 0
-for i in Sections.keys():
-    print(str(x + 1) + ") " + i)
-    x = x + 1
-
-SecAnswer = ifStatementNum("\nPick a course: ")
-
-fixedAnswer = Sections.get(str(list(Sections)[(int(SecAnswer) - 1)]))
-
-getAssignments = makeRequest("get", "https://api.schoology.com/v1/sections/{}/assignments".format(fixedAnswer), oauth, headers)
-print(getAssignments.status_code)
-AssignmentsRemaining = str(json.loads(getAssignments.text)["assignment"])
-Assignments = {}
-clear()
-
-while True:
-    Section1 = str(AssignmentsRemaining).split("\'id\': ", 1)
-    ID = str(Section1[1].split(", ", 1)[0])
-    Name = Section1[1].split("title\': \'", 1)[1].split("\'", 1)[0]
-    AssignmentsRemaining = Section1[1].split("title\': \'", 1)[1]
-    Assignments.update({Name: ID})
-    if str(AssignmentsRemaining.find("title\'")) == "-1":
-       break
-
-print("Assignments:\n")
-x = 0
-for i in Assignments.keys():
-    print(str(x + 1) + ") " + i)
-    x = x + 1
-
-AssigAnswer = ifStatementNum("\nPick an assignment: ")
-
-fixedAnswer2 = Sections.get(str(list(Assignments)[(int(AssigAnswer) - 1)]))
-
-
+WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.ID, "edit-current-key")))
+publicKey = driver.find_element_by_id("edit-current-key").get_attribute("value")
+secretKey = driver.find_element_by_id("edit-current-secret").get_attribute("value")
+WebDriverWait(driver, 10).until(EC.visibility_of_element_located((By.CSS_SELECTOR, "._1SIMq._2kpZl._3OAXJ._13cCs._3_bfp._2M5aC._24avl._3v0y7._2s0LQ._3ghFm._3LeCL._31GLY._9GDcm._1D8fw.util-height-six-3PHnk.util-pds-icon-default-2kZM7.StandardHeader-header-button-active-state-V0d6c.StandardHeader-header-button-1562K.Z_KgC.fjQuT.uQOmx")))
+button1 = driver.find_element_by_css_selector("._1SIMq._2kpZl._3OAXJ._13cCs._3_bfp._2M5aC._24avl._3v0y7._2s0LQ._3ghFm._3LeCL._31GLY._9GDcm._1D8fw.util-height-six-3PHnk.util-pds-icon-default-2kZM7.StandardHeader-header-button-active-state-V0d6c.StandardHeader-header-button-1562K.Z_KgC.fjQuT.uQOmx")
+button1.click()
+WebDriverWait(driver, 10).until(EC.visibility_of_element_located((By.XPATH, "//a[normalize-space()='Your Profile']")))
+prof_button = driver.find_element_by_xpath("//a[normalize-space()='Your Profile']")
+user_id = prof_button.get_attribute("href")
+userID = str(user_id).replace((domain + "/user/"), "").replace("/info", "")
+driver.quit()
+print("User ID: " + userID)
+print("User Secret Key: " + secretKey)
+print("User Public Key: " + publicKey)
